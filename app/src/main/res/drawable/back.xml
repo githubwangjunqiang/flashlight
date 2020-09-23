@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <item>
+        <bitmap
+            android:mipMap="true"
+            android:src="@mipmap/xingkong" />
+    </item>
+    <item>
+        <shape>
+            <solid android:color="#85000000" />
+        </shape>
+    </item>
+
+
+</layer-list>
