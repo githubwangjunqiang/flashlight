@@ -7,13 +7,23 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
+import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
@@ -23,10 +33,49 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int CODE_PER = 1001;
     private static final int CODE_PER2 = 1002;
+    private static final String TAG = "12345";
     private CameraManager manager;
     private Camera mCamera;
     private View mViewGuangzhu;
     private Switch mSwitch;
+    private Messenger mMessengerService;
+    private Messenger mMessenger = new Messenger(new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            Log.d(TAG, "客户端-handleMessage: " + msg);
+            if (msg.what == 200) {
+                Toast.makeText(MainActivity.this, "收到服务端的恢复", Toast.LENGTH_SHORT).show();
+            }
+        }
+    });
+    private ServiceConnection mServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.d(TAG, "bind service" + service);
+            ////Activity 与 Service连接成功使回调该方法
+            mMessengerService = new Messenger(service);
+
+            Message msg = Message.obtain(null, 100);
+            Bundle data = new Bundle();
+            data.putString("mymsg", "hello, this is client.");
+            msg.setData(data);
+            msg.replyTo = mMessenger;  //指定回信人是客户端定义的
+
+            try {
+                mMessengerService.send(msg);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            //Activity 与 Service 断开连接  回调该方法
+            mMessengerService = null;
+            Log.d(TAG, "onServiceDisconnected: ");
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,6 +174,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        unbindService(mServiceConnection);
+        super.onDestroy();
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode != CODE_PER) {
@@ -138,5 +193,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         open(null);
+    }
+
+    public void tongxun(View view) {
+        //绑定服务
+        Intent intent = new Intent(this, RemtoeService.class);
+        bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 }
